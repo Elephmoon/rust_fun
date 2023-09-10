@@ -25,17 +25,19 @@ fn main() {
 fn get_main_page(_req: &mut Request) -> IronResult<Response> {
     let mut resp = Response::new();
 
-    set_http_status_ok(&mut resp);
+    set_http_resp(
+        &mut resp, 
+        status::BadRequest, 
+        String::from(r#"
+            <title>Sum calculator</title>
+            <form action="/sum" method="post">
+                <input type="number" name="a">
+                <input type="number" name="b">
+                <button type="submit">Calc sum</button>
+            </form>    
+        "#)
+    );
     
-    resp.set_mut(r#"
-        <title>Sum calculator</title>
-        <form action="/sum" method="post">
-            <input type="number" name="a">
-            <input type="number" name="b">
-            <button type="submit">Calc sum</button>
-        </form>
-    "#);
-
     Ok(resp)
 }
 
@@ -46,8 +48,11 @@ fn post_calc_sum(req: &mut Request) -> IronResult<Response> {
 
     let form_data = match req.get_ref::<UrlEncodedBody>() {
         Err(err) => {
-            resp.set_mut(status::BadRequest);
-            resp.set_mut(format!("Error parsing form data: {:?}\n", err));
+            set_http_resp(
+                &mut resp, 
+                status::BadRequest, 
+                format!("error parsing form data: {:?}\n", err)
+            );
             return Ok(resp);
         }
         Ok(map) => map
@@ -55,8 +60,11 @@ fn post_calc_sum(req: &mut Request) -> IronResult<Response> {
 
     let first_arg = match get_numb_arg_from_body(form_data, &first_arg_name) {
         Err(err) => {
-            resp.set_mut(status::BadRequest);
-            resp.set_mut(format!("Error parsing form data: {:?}\n", err));
+            set_http_resp(
+                &mut resp, 
+                status::BadRequest, 
+                format!("error parsing form data: {:?}\n", err)
+            );
             return Ok(resp);
         }
         Ok(value) => value
@@ -64,18 +72,22 @@ fn post_calc_sum(req: &mut Request) -> IronResult<Response> {
 
     let second_arg = match get_numb_arg_from_body(form_data, &second_arg_name) {
         Err(err) => {
-            resp.set_mut(status::BadRequest);
-            resp.set_mut(format!("Error parsing form data: {:?}\n", err));
+            set_http_resp(
+                &mut resp, 
+                status::BadRequest, 
+                format!("error parsing form data: {:?}\n", err)
+            );
             return Ok(resp);
         }
         Ok(value) => value
     };
-
-    set_http_status_ok(&mut resp);
-
-    resp.set_mut(
+    
+    set_http_resp(
+        &mut resp, 
+        status::Ok, 
         format!("The sum of the numbers {}, {} is <b>{}</b>\n", 
-            first_arg, second_arg, first_arg+second_arg));
+            first_arg, second_arg, first_arg+second_arg)
+    );
 
     Ok(resp)
 }
@@ -92,7 +104,7 @@ fn get_numb_arg_from_body(form_data: &HashMap<String, Vec<String>>, param_name: 
         return Err(format!("cant parse arg {}", param_name));
     };
 
-    return match i32::from_str(unparsed_arg[0].as_str()) {
+    match i32::from_str(unparsed_arg[0].as_str()) {
         Err(err) => {
             Err(format!("parsing arg {} error {:?}", param_name, err))
         }
@@ -100,7 +112,7 @@ fn get_numb_arg_from_body(form_data: &HashMap<String, Vec<String>>, param_name: 
     }
 }
 
-fn set_http_status_ok(resp: &mut Response) {
+fn set_http_resp(resp: &mut Response, http_status: status::Status, resp_body: String) {
     resp.headers.set(
         ContentType(
             mime::Mime(
@@ -110,6 +122,6 @@ fn set_http_status_ok(resp: &mut Response) {
             )
         )
     );
-
-    resp.set_mut(status::Ok);
+    resp.set_mut(http_status);
+    resp.set_mut(resp_body);
 }

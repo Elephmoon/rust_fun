@@ -1,0 +1,9 @@
+[package]
+name = "rust_fun"
+version = "0.1.0"
+authors = ["alexandr.kizilov@pm.me"]
+
+[dependencies]
+iron = "0.6.1"
+router = "0.6.0"
+urlencoded = "0.6.0"
